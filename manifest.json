@@ -4,10 +4,18 @@
     "name": "Jellyfin Security",
     "description": "Comprehensive Jellyfin security: TOTP & email 2FA, passkeys, OIDC/SSO sign-in (Google, Microsoft, Apple, Authelia, Authentik, Keycloak, PocketID, Cloudflare Access, ...), brute-force IP banning, impossible-travel detection, per-user IP allowlist, device pairing, trusted browsers, and audit log.",
     "overview": "Comprehensive Jellyfin security: 2FA, passkeys, OIDC/SSO, brute-force protection, impossible-travel detection, IP allowlist, and audit logging.",
-    "owner": "ZL154",
+    "owner": "glauciolabs",
     "category": "General",
-    "imageUrl": "https://raw.githubusercontent.com/ZL154/JellyfinSecurity/main/assets/logo.png",
+    "imageUrl": "https://raw.githubusercontent.com/glauciolabs/JellyfinSecurity/main/assets/logo.png",
     "versions": [
+      {
+        "version": "2.5.9.1",
+        "changelog": "v2.5.9.1 — glauciolabs fork patch: Merged upstream v2.5.9 features (OIDC mobile sign-in, security hardening, etc.) and reapplied fork-specific customizations including Force HTTPS option, OIDC Admin elevation by group or user, and OIDC Token Exchange for native apps compat.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/glauciolabs/JellyfinSecurity/releases/download/v2.5.9.1/Jellyfin.Plugin.TwoFactorAuthv2.5.9.1.zip",
+        "checksum": "PLACEHOLDER",
+        "timestamp": "2026-06-14T01:46:00Z"
+      },
       {
         "version": "2.5.9.0",
         "changelog": "v2.5.9 - OIDC mobile sign-in + security hardening. Highlight: 'Sign in with Google' (and other OIDC/SSO providers) now works inside the Jellyfin mobile apps - the in-app browser was previously rejected by Google (403 disallowed_useragent) and dead-ended on the server screen; sign-in now opens in the device browser and returns you straight into the app, with per-provider 2FA-bypass preserved (issue #64). This release also includes a broad internal security-hardening pass across the authentication, OIDC/SSO, step-up, device-bypass and rate-limiting paths - no configuration changes or action needed on upgrade. Additionally: the injected login script is now served in a CDN/proxy-cache-safe way so an edge cache can no longer pin a stale copy after an upgrade; GeoIP database path handling is unified across lookups; and assorted reliability and resource-bounding improvements to in-memory sign-in state. In-place upgrade from any 2.5.x, no schema or data migration. 254/254 tests pass on .NET 9 / Jellyfin 10.11.x. Sigstore-signed + SLSA build-provenance attested.",

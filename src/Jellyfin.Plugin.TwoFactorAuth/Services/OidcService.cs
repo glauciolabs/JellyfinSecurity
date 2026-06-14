@@ -646,19 +646,63 @@ public class OidcService : IDisposable
         // Our Authenticate delegates to the default provider for normal
         // passwords, so flipping this is additive — password login still
         // works identically.
+        var changed = false;
+
+        // Optional: elevate to Jellyfin administrator based on groups or specific users.
+        try
+        {
+            var shouldBeAdmin = false;
+            if (!string.IsNullOrWhiteSpace(provider.AdminGroups))
+            {
+                var admins = provider.AdminGroups.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                if (claims.Groups.Any(g => admins.Any(a => a.Equals(g, StringComparison.OrdinalIgnoreCase))))
+                {
+                    shouldBeAdmin = true;
+                }
+            }
+            if (!shouldBeAdmin && !string.IsNullOrWhiteSpace(provider.AdminUsers))
+            {
+                var admins = provider.AdminUsers.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                if (admins.Any(a => a.Equals(claims.Email, StringComparison.OrdinalIgnoreCase) || a.Equals(claims.Subject, StringComparison.OrdinalIgnoreCase)))
+                {
+                    shouldBeAdmin = true;
+                }
+            }
+
+            if (shouldBeAdmin)
+            {
+                dynamic dUser = matchedUser;
+                if (!dUser.Policy.IsAdministrator)
+                {
+                    dUser.Policy.IsAdministrator = true;
+                    changed = true;
+                    _logger.LogInformation("[2FA] Elevated {User} to Administrator via OIDC match", matchedUser.Username);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "[2FA] Could not check/set IsAdministrator via dynamic Policy");
+        }
+
         try
         {
             var ourProviderId = typeof(TwoFactorAuthProvider).FullName!;
             if (!string.Equals(matchedUser.AuthenticationProviderId, ourProviderId, StringComparison.Ordinal))
             {
                 matchedUser.AuthenticationProviderId = ourProviderId;
-                await _userManager.UpdateUserAsync(matchedUser).ConfigureAwait(false);
+                changed = true;
                 _logger.LogInformation("[2FA] Reassigned {User} AuthenticationProviderId to TwoFactorAuthProvider for OIDC bridge", matchedUser.Username);
+            }
+
+            if (changed)
+            {
+                await _userManager.UpdateUserAsync(matchedUser).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[2FA] Could not reassign AuthenticationProviderId for {User}", matchedUser.Username);
+            _logger.LogWarning(ex, "[2FA] Could not update user properties for {User}", matchedUser.Username);
         }
 
         return new CallbackResult(true, null, matchedUser.Id, matchedUser.Username, returnUrl, link);
@@ -667,7 +711,7 @@ public class OidcService : IDisposable
     /// <summary>Try to find a Jellyfin user matching the IdP claims. Order:
     /// (1) existing SsoLink, (2) email match against UserEmails config,
     /// (3) auto-create if provider allows.</summary>
-    private async Task<Jellyfin.Database.Implementations.Entities.User?> ResolveUserAsync(OidcProvider provider, ClaimsBundle claims)
+    public async Task<Jellyfin.Database.Implementations.Entities.User?> ResolveUserAsync(OidcProvider provider, ClaimsBundle claims)
     {
         // 1. Existing link by sub
         var allUsers = await _store.GetAllUsersAsync().ConfigureAwait(false);
@@ -835,13 +879,19 @@ public class OidcService : IDisposable
         }
     }
 
-    private record ClaimsBundle(
+    public record ClaimsBundle(
         string Subject,
         string Email,
         bool EmailVerified,
         string Username,
         string[] Groups,
         string[] Amr);
+
+    public async Task<ClaimsBundle> ValidateExternalIdTokenAsync(OidcProvider provider, string idToken)
+    {
+        var disc = await GetDiscoveryAsync(provider).ConfigureAwait(false);
+        return await VerifyIdTokenAsync(provider, disc, idToken, expectedNonce: null).ConfigureAwait(false);
+    }
 
     private async Task<ClaimsBundle> VerifyIdTokenAsync(OidcProvider provider, Discovery disc, string idToken, string? expectedNonce)
     {

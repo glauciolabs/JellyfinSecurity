@@ -402,6 +402,10 @@
                                 <input type="text" id="ssoAdminGroups" class="tfa-input" style="width:360px;" />
                             </div>
                             <div class="tfa-row">
+                                <label>Admin users (emails or GUIDs, comma-separated, optional)</label>
+                                <input type="text" id="ssoAdminUsers" class="tfa-input" style="width:360px;" />
+                            </div>
+                            <div class="tfa-row">
                                 <label><input type="checkbox" id="ssoAutoCreate" is="emby-checkbox" /> <span data-i18n-key="tfa.admin.sso.opt_auto_create">Auto-create Jellyfin users on first sign-in (only enable for trusted IdPs)</span></label>
                             </div>
                             <div class="tfa-row">
@@ -484,6 +488,9 @@
                             </div>
                             <div class="tfa-row" style="margin-top:12px;">
                                 <label><input type="checkbox" id="cfgTrustFwd" is="emby-checkbox" /> <span data-i18n-key="tfa.admin.settings.opt_trust_fwd">Trust X-Forwarded-For (for reverse proxies)</span></label>
+                            </div>
+                            <div class="tfa-row">
+                                <label><input type="checkbox" id="cfgForceHttps" is="emby-checkbox" /> <span>Force HTTPS for redirect URIs (OIDC/Passkeys)</span></label>
                             </div>
                             <div style="margin-top:12px;">
                                 <label style="font-size:13px;color:#888;" data-i18n-key="tfa.admin.settings.lbl_proxy_cidrs">Trusted proxy CIDRs (one per line)</label>

@@ -213,6 +213,8 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public string[] TrustedProxyCidrs { get; set; } = Array.Empty<string>();
 
+    public bool ForceHttps { get; set; } = false;
+
     public bool EmailOtpEnabled { get; set; } = true;
 
     /// <summary>v2.4: opt-in Have I Been Pwned password check on successful

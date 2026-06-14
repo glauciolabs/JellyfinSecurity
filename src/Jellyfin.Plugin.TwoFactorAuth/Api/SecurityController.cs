@@ -109,6 +109,7 @@ public class SecurityController : ControllerBase
         public string UsernameClaim { get; set; } = "preferred_username";
         public string AllowedGroups { get; set; } = string.Empty;
         public string AdminGroups { get; set; } = string.Empty;
+        public string AdminUsers { get; set; } = string.Empty;
         public bool AutoCreateUsers { get; set; }
         public bool RequireIdpMfa { get; set; }
         public bool BypassPluginTwoFa { get; set; } = true;
@@ -170,6 +171,7 @@ public class SecurityController : ControllerBase
             usernameClaim = p.UsernameClaim,
             allowedGroups = p.AllowedGroups,
             adminGroups = p.AdminGroups,
+            adminUsers = p.AdminUsers,
             autoCreateUsers = p.AutoCreateUsers,
             requireIdpMfa = p.RequireIdpMfa,
             bypassPluginTwoFa = p.BypassPluginTwoFa,
@@ -213,6 +215,7 @@ public class SecurityController : ControllerBase
             UsernameClaim = req.UsernameClaim,
             AllowedGroups = req.AllowedGroups,
             AdminGroups = req.AdminGroups,
+            AdminUsers = req.AdminUsers,
             AutoCreateUsers = req.AutoCreateUsers,
             RequireIdpMfa = req.RequireIdpMfa,
             BypassPluginTwoFa = req.BypassPluginTwoFa,
@@ -253,6 +256,7 @@ public class SecurityController : ControllerBase
         existing.UsernameClaim = req.UsernameClaim;
         existing.AllowedGroups = req.AllowedGroups;
         existing.AdminGroups = req.AdminGroups;
+        existing.AdminUsers = req.AdminUsers;
         existing.AutoCreateUsers = req.AutoCreateUsers;
         existing.RequireIdpMfa = req.RequireIdpMfa;
         existing.BypassPluginTwoFa = req.BypassPluginTwoFa;
@@ -707,6 +711,59 @@ public class SecurityController : ControllerBase
         Response.Headers["Content-Security-Policy"] =
             "default-src 'self'; script-src 'unsafe-inline' 'self'; style-src 'unsafe-inline' 'self'; frame-ancestors 'none'";
         return Content(html, "text/html; charset=utf-8");
+    }
+
+    public class ExchangeTokenRequest
+    {
+        [Required] public string ProviderId { get; set; } = string.Empty;
+        [Required] public string IdToken { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// POST /TwoFactorAuth/Oidc/ExchangeToken
+    /// Allows native apps (like Noctiluca) to exchange a validated IdP id_token
+    /// for a Jellyfin bridge token.
+    /// </summary>
+    [HttpPost("Oidc/ExchangeToken")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ExchangeToken([FromBody] ExchangeTokenRequest req)
+    {
+        try
+        {
+            var config = Plugin.Instance?.Configuration;
+            var provider = config?.OidcProviders.FirstOrDefault(p => p.Id == req.ProviderId);
+            if (provider == null || !provider.Enabled)
+            {
+                return BadRequest(new { message = "Provider not found or disabled" });
+            }
+
+            // 1. Validate ID Token (signature, issuer, audience)
+            var claims = await _oidc.ValidateExternalIdTokenAsync(provider, req.IdToken).ConfigureAwait(false);
+
+            // 2. Resolve Jellyfin User (by sub, email, or auto-create)
+            var matchedUser = await _oidc.ResolveUserAsync(provider, claims).ConfigureAwait(false);
+            if (matchedUser == null)
+            {
+                return Unauthorized(new { message = "No Jellyfin user matched the IdP identity" });
+            }
+
+            // 3. Mint Bridge Token (valid for 60s, single use)
+            var bridgeToken = _oidcBridge.Mint(matchedUser.Id, matchedUser.Username ?? string.Empty, provider.Id, bypassPluginTwoFa: provider.BypassPluginTwoFa);
+
+            _logger.LogInformation("[2FA] OIDC Token Exchange success for {User} via {Pid}", 
+                matchedUser.Username, provider.Id);
+
+            return Ok(new
+            {
+                username = matchedUser.Username,
+                token = bridgeToken
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[2FA] OIDC Token Exchange failed");
+            return Unauthorized(new { message = "Token exchange failed: " + ex.Message });
+        }
     }
 
     // =========================================================================

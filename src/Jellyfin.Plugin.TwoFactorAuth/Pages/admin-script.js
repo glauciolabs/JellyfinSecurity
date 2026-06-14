@@ -1002,6 +1002,7 @@
                         page.querySelector('#cfgLanBypass').checked = !!c.LanBypassEnabled;
                         page.querySelector('#cfgLanCidrs').value = (c.LanBypassCidrs || []).join('\n');
                         page.querySelector('#cfgTrustFwd').checked = !!c.TrustForwardedFor;
+                        page.querySelector('#cfgForceHttps').checked = !!c.ForceHttps;
                         page.querySelector('#cfgProxyCidrs').value = (c.TrustedProxyCidrs || []).join('\n');
                         page.querySelector('#cfgMaxFail').value = c.MaxFailedAttempts || 5;
                         page.querySelector('#cfgLockoutMin').value = c.LockoutDurationMinutes || 15;
@@ -1137,6 +1138,7 @@
                         c.LanBypassEnabled = page.querySelector('#cfgLanBypass').checked;
                         c.LanBypassCidrs = page.querySelector('#cfgLanCidrs').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
                         c.TrustForwardedFor = page.querySelector('#cfgTrustFwd').checked;
+                        c.ForceHttps = page.querySelector('#cfgForceHttps').checked;
                         c.TrustedProxyCidrs = page.querySelector('#cfgProxyCidrs').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
                         c.MaxFailedAttempts = parseInt(page.querySelector('#cfgMaxFail').value) || 5;
                         c.LockoutDurationMinutes = parseInt(page.querySelector('#cfgLockoutMin').value) || 15;
@@ -1372,6 +1374,7 @@
                     page.querySelector('#ssoAcr').value = prov ? (prov.acrValues || '') : '';
                     page.querySelector('#ssoAllowedGroups').value = prov ? (prov.allowedGroups || '') : '';
                     page.querySelector('#ssoAdminGroups').value = prov ? (prov.adminGroups || '') : '';
+                    page.querySelector('#ssoAdminUsers').value = prov ? (prov.adminUsers || prov.AdminUsers || '') : '';
                     page.querySelector('#ssoAutoCreate').checked = prov ? !!prov.autoCreateUsers : false;
                     page.querySelector('#ssoRequireMfa').checked = prov ? !!prov.requireIdpMfa : false;
                     page.querySelector('#ssoBypass2fa').checked = prov ? prov.bypassPluginTwoFa !== false : true;
@@ -1423,6 +1426,7 @@
                         AcrValues: page.querySelector('#ssoAcr').value.trim(),
                         AllowedGroups: page.querySelector('#ssoAllowedGroups').value.trim(),
                         AdminGroups: page.querySelector('#ssoAdminGroups').value.trim(),
+                        AdminUsers: page.querySelector('#ssoAdminUsers').value.trim(),
                         AutoCreateUsers: page.querySelector('#ssoAutoCreate').checked,
                         RequireIdpMfa: page.querySelector('#ssoRequireMfa').checked,
                         BypassPluginTwoFa: page.querySelector('#ssoBypass2fa').checked,

@@ -55,6 +55,11 @@ public class PasskeyService
         string scheme = context.Request.Scheme;
         int? port = context.Request.Host.Port;
 
+        if (config?.ForceHttps == true)
+        {
+            scheme = "https";
+        }
+
         if (config is { TrustForwardedFor: true } && config.TrustedProxyCidrs.Length > 0)
         {
             var peer = context.Connection.RemoteIpAddress?.ToString();
